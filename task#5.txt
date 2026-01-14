@@ -1,0 +1,62 @@
+import streamlit as st
+import qrcode
+from PIL import Image
+import sqlite3
+from streamlit_qrcode_scanner import qrcode_scanner
+import io
+
+conn = sqlite3.connect("friends.db")
+c = conn.cursor()
+
+c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        user_id TEXT PRIMARY KEY
+    )
+""")
+c.execute("""
+    CREATE TABLE IF NOT EXISTS friends (
+        user_id TEXT,
+        friend_id TEXT,
+        UNIQUE(user_id, friend_id)
+    )
+""")
+conn.commit()
+
+st.title("QR Friend Connection Platform")
+
+st.header("Step 1: Generate Your QR Code")
+user_id = st.text_input("Enter your User ID")
+
+if user_id:
+
+    c.execute("INSERT OR IGNORE INTO users(user_id) VALUES (?)", (user_id,))
+    conn.commit()
+    
+    qr_img = qrcode.make(user_id)
+    st.image(qr_img, caption=f"Your QR Code ({user_id})", use_column_width=False)
+
+st.header("Step 2: Scan Friend's QR Code")
+if user_id:
+    scanned_data = qrcode_scanner
+    if scanned_data:
+        friend_id = scanned_data
+        if friend_id == user_id:
+            st.warning("You cannot add yourself!")
+        else:
+            try:
+                c.execute("INSERT INTO friends(user_id, friend_id) VALUES (?, ?)", (user_id, friend_id))
+                c.execute("INSERT INTO friends(user_id, friend_id) VALUES (?, ?)", (friend_id, user_id))
+                conn.commit()
+                st.success(f"Friend connected: {friend_id}")
+            except sqlite3.IntegrityError:
+                st.info("You are already friends with this user.")
+
+st.header("Step 3: Your Friends List")
+if user_id:
+    c.execute("SELECT friend_id FROM friends WHERE user_id=?", (user_id,))
+    friend_list = c.fetchall()
+    if friend_list:
+        for f in friend_list:
+            st.write(f"- {f[0]}")
+    else:
+        st.write("No friends connected yet.")
