@@ -1,0 +1,134 @@
+import streamlit as st
+import sqlite3
+from datetime import datetime
+
+conn = sqlite3.connect("social.db", check_same_thread=False)
+c = conn.cursor()
+
+c.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    username TEXT PRIMARY KEY
+)
+""")
+
+c.execute("""
+CREATE TABLE IF NOT EXISTS posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT,
+    content TEXT,
+    timestamp TEXT
+)
+""")
+
+c.execute("""
+CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id INTEGER,
+    username TEXT,
+    comment TEXT
+)
+""")
+
+c.execute("""
+CREATE TABLE IF NOT EXISTS likes (
+    post_id INTEGER,
+    username TEXT,
+    UNIQUE(post_id, username)
+)
+""")
+
+c.execute("""
+CREATE TABLE IF NOT EXISTS follows (
+    follower TEXT,
+    following TEXT,
+    UNIQUE(follower, following)
+)
+""")
+
+conn.commit()
+
+st.title("Mini Social Media App")
+
+username = st.text_input("Enter username")
+
+if not username:
+    st.stop()
+
+c.execute("INSERT OR IGNORE INTO users VALUES (?)", (username,))
+conn.commit()
+
+st.success(f"Logged in as {username}")
+
+st.header("Follow Users")
+
+c.execute("SELECT username FROM users WHERE username != ?", (username,))
+all_users = [u[0] for u in c.fetchall()]
+
+follow_user = st.selectbox("Select user to follow", [""] + all_users)
+
+if follow_user:
+    try:
+        c.execute("INSERT INTO follows VALUES (?, ?)", (username, follow_user))
+        conn.commit()
+        st.success(f"You followed {follow_user}")
+    except:
+        st.info("Already following")
+
+st.header("Create Post")
+
+post_content = st.text_area("What's on your mind?")
+if st.button("Post"):
+    if post_content.strip():
+        c.execute(
+            "INSERT INTO posts (username, content, timestamp) VALUES (?, ?, ?)",
+            (username, post_content, datetime.now().strftime("%Y-%m-%d %H:%M"))
+        )
+        conn.commit()
+        st.success("Post created")
+
+st.header("Your Feed")
+
+c.execute("""
+SELECT posts.id, posts.username, posts.content, posts.timestamp
+FROM posts
+JOIN follows ON posts.username = follows.following
+WHERE follows.follower = ?
+ORDER BY posts.id DESC
+""", (username,))
+
+posts = c.fetchall()
+
+if not posts:
+    st.info("Follow users to see posts")
+
+for post_id, author, content, time in posts:
+    st.subheader(author)
+    st.caption(time)
+    st.write(content)
+
+    c.execute("SELECT COUNT(*) FROM likes WHERE post_id=?", (post_id,))
+    like_count = c.fetchone()[0]
+
+    if st.button(f"👍 Like ({like_count})", key=f"like{post_id}"):
+        try:
+            c.execute("INSERT INTO likes VALUES (?, ?)", (post_id, username))
+            conn.commit()
+        except:
+            pass
+
+    comment = st.text_input("Comment", key=f"c{post_id}")
+    if st.button("Add Comment", key=f"b{post_id}"):
+        if comment.strip():
+            c.execute(
+                "INSERT INTO comments (post_id, username, comment) VALUES (?, ?, ?)",
+                (post_id, username, comment)
+            )
+            conn.commit()
+
+    c.execute("SELECT username, comment FROM comments WHERE post_id=?", (post_id,))
+    comments = c.fetchall()
+
+    for u, cm in comments:
+        st.write(f"💬 **{u}:** {cm}")
+
+    st.divider()
