@@ -1,0 +1,104 @@
+import streamlit as st
+from streamlit_drawable_canvas import st_canvas
+
+st.set_page_config(
+    page_title="Video Conferencing & Collaboration Tool",
+    layout="wide"
+)
+
+st.title("Prototype: Video Conferencing & Collaboration System")
+st.caption("Hackathon Demo | Task 06")
+
+st.sidebar.header("Join Meeting")
+
+username = st.sidebar.text_input("Your Name")
+meeting_id = st.sidebar.text_input("Meeting ID")
+
+if username and meeting_id:
+    st.sidebar.success(f"Joined as {username}")
+else:
+    st.sidebar.warning("Enter name and meeting ID")
+
+st.sidebar.divider()
+st.sidebar.subheader("Participants")
+if username:
+    st.sidebar.write(f"• {username}")
+
+tab1, tab2, tab3, tab4 = st.tabs(
+    [" Video Call", "🖥 Screen Share", " File Sharing", "✏ Whiteboard"]
+)
+with tab1:
+    st.subheader("Video Calling (Multi-User)")
+    st.info(
+        "This prototype integrates external WebRTC-based video conferencing "
+        "platforms such as Google Meet or Zoom."
+    )
+
+    video_link = st.text_input("Paste Video Call Link (Google Meet / Zoom)")
+    if video_link:
+        st.markdown(
+            f"###  [Join Video Conference]({video_link})",
+            unsafe_allow_html=True
+        )
+
+with tab2:
+    st.subheader("Screen Sharing")
+    st.info(
+        "Screen sharing is demonstrated using screen capture upload. "
+        "In a real system, WebRTC screen streaming would be used."
+    )
+
+    screen_file = st.file_uploader(
+        "Upload Screen Screenshot",
+        type=["png", "jpg", "jpeg"]
+    )
+
+    if screen_file:
+        st.image(
+            screen_file,
+            caption="Shared Screen",
+            use_column_width=True
+        )
+
+with tab3:
+    st.subheader("File Sharing")
+    st.info(
+        "Files can be uploaded and shared with all meeting participants."
+    )
+
+    shared_file = st.file_uploader("Upload File to Share")
+
+    if shared_file:
+        st.success("File uploaded successfully")
+        st.download_button(
+            label="Download File",
+            data=shared_file,
+            file_name=shared_file.name
+        )
+
+with tab4:
+    st.subheader("Collaborative Whiteboard")
+    st.info(
+        "Participants can draw or write on a shared whiteboard. "
+        "In a real system, drawing events would be synchronized in real-time."
+    )
+
+    canvas_result = st_canvas(
+        fill_color="rgba(255, 255, 255, 0)",
+        stroke_width=3,
+        stroke_color="#000000",
+        background_color="#FFFFFF",
+        height=400,
+        width=700,
+        drawing_mode="freedraw",
+        key="whiteboard",
+    )
+
+    if canvas_result.json_data:
+        st.success("Whiteboard updated")
+
+st.divider()
+st.caption(
+    "This is a prototype implementation for demonstration purposes "
+    "based on system design principles."
+)
