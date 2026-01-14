@@ -1,0 +1,67 @@
+import streamlit as st
+
+st.write("App started")
+
+try:
+    import lyricsgenius
+    from wordcloud import WordCloud, STOPWORDS
+    import matplotlib.pyplot as plt
+    import re
+except Exception as e:
+    st.error("Import failed")
+    st.exception(e)
+    st.stop()
+
+st.title("Lyrics Word Cloud Generator")
+
+GENIUS_TOKEN = st.text_input("Genius API Token", type="password")
+
+if not GENIUS_TOKEN:
+    st.info("Enter token to continue")
+    st.stop()
+
+st.write("Token entered")
+
+try:
+    genius = lyricsgenius.Genius(
+        GENIUS_TOKEN,
+        remove_section_headers=True
+    )
+except Exception as e:
+    st.error("Genius init failed")
+    st.exception(e)
+    st.stop()
+
+song = st.text_input("Song Name")
+artist = st.text_input("Artist Name")
+
+if st.button("Generate"):
+    if not song or not artist:
+        st.error("Missing inputs")
+        st.stop()
+
+    with st.spinner("Fetching lyrics..."):
+        try:
+            result = genius.search_song(song, artist)
+        except Exception as e:
+            st.error("API error")
+            st.exception(e)
+            st.stop()
+
+    if not result:
+        st.error("Lyrics not found")
+        st.stop()
+
+    lyrics = result.lyrics
+    lyrics = re.sub(r"\[.*?\]", "", lyrics).lower()
+
+    wc = WordCloud(
+        background_color="white",
+        stopwords=STOPWORDS
+    ).generate(lyrics)
+
+    fig, ax = plt.subplots()
+    ax.imshow(wc)
+    ax.axis("off")
+
+    st.pyplot(fig)
