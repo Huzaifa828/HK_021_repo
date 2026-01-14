@@ -1,0 +1,42 @@
+import streamlit as st
+import pandas as pd
+from datetime import datetime
+
+st.title("Receipt Analytics (Simulated SROIE Dataset)")
+
+# Simulate dataset
+data = [
+    {"file": "receipt_001.jpg", "merchant": "Store A", "date": "2025-01-02", "total": 25.50},
+    {"file": "receipt_002.jpg", "merchant": "Store B", "date": "2025-01-15", "total": 13.20},
+    {"file": "receipt_003.jpg", "merchant": "Store C", "date": "2025-02-03", "total": 45.00},
+    {"file": "receipt_004.jpg", "merchant": "Store A", "date": "2025-02-20", "total": 30.75},
+    {"file": "receipt_005.jpg", "merchant": "Store D", "date": "2025-03-05", "total": 10.50},
+]
+
+df = pd.DataFrame(data)
+df['date'] = pd.to_datetime(df['date'])
+st.subheader("Loaded Receipts")
+st.dataframe(df)
+
+df["month"] = df["date"].dt.to_period("M")
+monthly_summary = df.groupby("month")["total"].sum()
+st.subheader("Monthly Expense Summary")
+st.bar_chart(monthly_summary)
+
+st.subheader("Total Expenses")
+st.write(f"${df['total'].sum():.2f}")
+
+# Optional: Merchant-wise summary
+merchant_summary = df.groupby("merchant")["total"].sum()
+st.subheader("Total Spend by Merchant")
+st.bar_chart(merchant_summary)
+
+
+
+
+
+
+#  streamlit run C:\Users\HUZAIFA\Documents\python\test1\HK_021_Task_1.py
+
+
+
